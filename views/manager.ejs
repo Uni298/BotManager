@@ -1,0 +1,324 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Manage <%= botName %></title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.1/dist/tailwind.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .modern-button {
+      background: linear-gradient(135deg, #374151, #1f2937);
+      border: 1px solid #d1d5db;
+      transition: all 0.2s ease;
+    }
+    .modern-button:hover {
+      background: linear-gradient(135deg, #1f2937, #111827);
+      border-color: #9ca3af;
+      transform: translateY(-1px);
+    }
+    .modern-button-green {
+      background: linear-gradient(135deg, #059669, #047857);
+      border: 1px solid #d1d5db;
+      transition: all 0.2s ease;
+    }
+    .modern-button-green:hover {
+      background: linear-gradient(135deg, #047857, #065f46);
+      transform: translateY(-1px);
+    }
+    .modern-button-red {
+      background: linear-gradient(135deg, #dc2626, #b91c1c);
+      border: 1px solid #d1d5db;
+      transition: all 0.2s ease;
+    }
+    .modern-button-red:hover {
+      background: linear-gradient(135deg, #b91c1c, #991b1b);
+      transform: translateY(-1px);
+    }
+    .modern-input {
+      border: 1px solid #d1d5db;
+      transition: all 0.2s ease;
+    }
+    .modern-input:focus {
+      border-color: #6b7280;
+      box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.1);
+    }
+    .code-editor {
+      background: #f9fafb;
+      border: 1px solid #d1d5db;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      transition: all 0.2s ease;
+    }
+    .code-editor:focus {
+      border-color: #6b7280;
+      box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.1);
+    }
+    .log-container {
+      background: #1f2937;
+      color: #e5e7eb;
+      font-family: 'JetBrains Mono', monospace;
+      height: 400px;
+      overflow-y: auto;
+      padding: 1rem;
+      border-radius: 0.5rem;
+    }
+    .log-stdout { color: #10b981; }
+    .log-stderr { color: #ef4444; }
+    .log-stdin { color: #3b82f6; }
+    .log-exit { color: #f59e0b; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <div class="min-h-screen p-4">
+    <div class="w-full mx-auto" style="max-width: calc(100vw - 2rem);">
+      <!-- ヘッダー -->
+      <div class="bg-white rounded-lg p-6 mb-6 border border-gray-200">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center">
+            <button onclick="window.location.href='/dashboard'" 
+                    class="bg-gray-100 hover:bg-gray-200 text-gray-700 p-3 rounded-lg mr-4 transition-all duration-200 border border-gray-200">
+              <i class="fas fa-arrow-left"></i>
+            </button>
+            <div>
+              <h1 class="text-2xl font-semibold text-gray-900 flex items-center">
+                <i class="fas fa-robot mr-3 text-gray-600"></i><%= botName %>
+              </h1>
+              <p class="text-gray-500">ボット管理</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- コントロールパネル -->
+      <div class="bg-white rounded-lg p-6 mb-6 border border-gray-200">
+        <h2 class="text-lg font-medium text-gray-900 mb-4">
+          <i class="fas fa-sliders-h mr-2 text-gray-600"></i>コントロール
+        </h2>
+        
+        <!-- 起動コマンド設定 -->
+        <div class="mb-6">
+          <label class="block text-gray-700 font-medium mb-3">
+            起動コマンド
+          </label>
+          <div class="flex gap-3">
+            <input type="text" 
+                   id="startCommand" 
+                   value="<%= startCommand %>"
+                   placeholder="例: node index.js" 
+                   class="modern-input flex-1 px-4 py-3 bg-gray-50 text-gray-900 rounded-lg focus:outline-none focus:bg-white">
+            <button onclick="saveStartCommand()" 
+                    class="modern-button text-white px-8 py-3 rounded-lg font-medium">
+              <i class="fas fa-save mr-2"></i>保存
+            </button>
+          </div>
+        </div>
+        
+        <div class="flex flex-wrap gap-4">
+          <form method="POST" action="/start/<%= botName %>" class="inline">
+            <button class="modern-button-green text-white px-10 py-4 rounded-lg font-medium text-lg">
+              <i class="fas fa-play mr-3"></i>開始
+            </button>
+          </form>
+          <form method="POST" action="/stop/<%= botName %>" class="inline">
+            <button class="modern-button-red text-white px-10 py-4 rounded-lg font-medium text-lg">
+              <i class="fas fa-stop mr-3"></i>停止
+            </button>
+          </form>
+          <form method="POST" action="/delete/<%= botName %>" onsubmit="return confirm('本当に削除しますか？')" class="inline">
+            <button class="modern-button text-white px-10 py-4 rounded-lg font-medium text-lg">
+              <i class="fas fa-trash mr-3"></i>削除
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- ログ表示 -->
+      <div class="bg-white rounded-lg p-6 mb-6 border border-gray-200">
+        <h2 class="text-lg font-medium text-gray-900 mb-4">
+          <i class="fas fa-terminal mr-2 text-gray-600"></i>ログ
+        </h2>
+        <div class="log-container" id="logContainer">
+          <div class="text-gray-400 text-sm">ログを読み込み中...</div>
+        </div>
+        <div class="mt-4 flex gap-2">
+          <input type="text" 
+                 id="commandInput" 
+                 placeholder="コマンドを入力..." 
+                 class="modern-input flex-1 px-4 py-2 bg-gray-50 text-gray-900 rounded-lg focus:outline-none focus:bg-white"
+                 onkeypress="handleEnterKey(event)">
+          <button onclick="sendCommand()" 
+                  class="modern-button text-white px-6 py-2 rounded-lg font-medium">
+            <i class="fas fa-paper-plane mr-2"></i>送信
+          </button>
+        </div>
+      </div>
+
+      <!-- ファイルエディター -->
+      <div class="bg-white rounded-lg p-6 border border-gray-200">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-lg font-medium text-gray-900">
+            <i class="fas fa-code mr-2 text-gray-600"></i>ファイルエディター
+          </h2>
+        </div>
+
+        <!-- ファイル選択 -->
+        <div class="mb-6">
+          <label for="file" class="block text-gray-700 font-medium mb-3">
+            ファイルを選択:
+          </label>
+          <select id="file" 
+                  onchange="location.href='/manager/<%= botName %>?file=' + encodeURIComponent(this.value)" 
+                  class="modern-input w-full bg-gray-50 text-gray-900 rounded-lg px-4 py-3 focus:outline-none focus:bg-white">
+            <% files.forEach(f => { %>
+              <option value="<%= f %>" <%= file === f ? 'selected' : '' %>>
+                <%= f %>
+              </option>
+            <% }) %>
+          </select>
+        </div>
+
+        <!-- コードエディター -->
+        <form method="POST">
+          <input type="hidden" name="file" value="<%= file %>">
+          <div class="mb-6">
+            <div class="relative">
+              <textarea name="code" 
+                        id="codeEditor"
+                        class="code-editor w-full text-sm p-4 rounded-lg text-gray-900 focus:outline-none resize-none"
+                        placeholder="コードをここに入力..."
+                        style="height: 70vh; min-height: 500px; width: 100%; max-width: calc(100vw - 4rem); font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace; line-height: 1.6; font-size: 14px;"><%= code %></textarea>
+            </div>
+          </div>
+          
+          <div class="flex items-center justify-between">
+            <button type="submit" 
+                    class="modern-button text-white px-8 py-3 rounded-lg font-medium">
+              <i class="fas fa-save mr-2"></i>保存
+            </button>
+            <div class="text-gray-500 text-sm">
+              編集中: <%= file %>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const socket = io();
+    const botName = '<%= botName %>';
+    const logContainer = document.getElementById('logContainer');
+    const commandInput = document.getElementById('commandInput');
+    
+    function saveStartCommand() {
+      const startCommand = document.getElementById('startCommand').value.trim();
+      if (startCommand) {
+        fetch(`/api/config/${botName}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ startCommand: startCommand })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('起動コマンドを保存しました！');
+          } else {
+            alert('保存に失敗しました。');
+          }
+        })
+        .catch(error => {
+          alert('エラーが発生しました: ' + error.message);
+        });
+      }
+    }
+    
+    // ログの初期読み込み
+    fetch(`/api/logs/${botName}`)
+      .then(response => response.json())
+      .then(logs => {
+        logContainer.innerHTML = '';
+        logs.forEach(log => addLogEntry(log));
+      })
+      .catch(error => {
+        logContainer.innerHTML = '<div class="text-red-400">ログの読み込みに失敗しました</div>';
+      });
+
+    // WebSocketでリアルタイムログ受信
+    socket.on('bot-log', (data) => {
+      if (data.botName === botName) {
+        addLogEntry(data);
+      }
+    });
+
+    function addLogEntry(log) {
+      const logDiv = document.createElement('div');
+      const timestamp = new Date(log.timestamp).toLocaleTimeString();
+      const typeClass = `log-${log.type}`;
+      
+      logDiv.innerHTML = `<span class="text-gray-500">[${timestamp}]</span> <span class="${typeClass}">${log.message}</span>`;
+      logContainer.appendChild(logDiv);
+      logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    function sendCommand() {
+      const input = commandInput.value.trim();
+      if (input) {
+        fetch(`/api/input/${botName}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ input: input })
+        });
+        commandInput.value = '';
+      }
+    }
+
+    function handleEnterKey(event) {
+      if (event.key === 'Enter') {
+        sendCommand();
+      }
+    }
+
+    // シンタックスハイライトの適用
+    const codeEditor = document.getElementById('codeEditor');
+    const fileName = '<%= file %>';
+    
+    // ファイル拡張子に基づいて言語を判定
+    function getLanguageFromFile(fileName) {
+      const ext = fileName.split('.').pop().toLowerCase();
+      const languageMap = {
+        'js': 'javascript',
+        'json': 'json',
+        'py': 'python',
+        'html': 'html',
+        'css': 'css',
+        'md': 'markdown',
+        'txt': 'text'
+      };
+      return languageMap[ext] || 'text';
+    }
+
+    // エディタにフォーカスが当たったときにハイライトを適用
+    codeEditor.addEventListener('focus', function() {
+      this.style.fontFamily = "'JetBrains Mono', 'Fira Code', monospace";
+    });
+
+    // 保存時にハイライトを適用
+    document.querySelector('form').addEventListener('submit', function(e) {
+      setTimeout(() => {
+        Prism.highlightAll();
+      }, 100);
+    });
+  </script>
+</body>
+</html>
